@@ -1,0 +1,61 @@
+version: '3'
+services:
+  # the first service we add is the postgress container
+  postgres:
+    # base image to use for this container
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  nginx:
+    # need to make sure nginx server is always on, it is routing traffic to our
+    # entire app
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80' # maps localhost:3050 to 80 in the container
+  # we call our server container 'api' so we don't have to use 'server' inside
+  # our nginx conf file, since it might be protected
+  api:
+    build:
+      # no need to specify the folder for the dockerfile,
+      # we do that with the context property
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      # first, don't overwrite the node_modules folder
+      - /app/node_modules
+      # copy everything inside local ./server into /app folder of the container
+      - ./server:/app
+    # add environment variables
+    environment:
+      # we can use the name of the redis service we created above: 'redis'
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+    environment:
+      - WDS_SOCKET_PORT=0
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
