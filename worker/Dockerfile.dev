@@ -1,0 +1,8 @@
+FROM node:14.14.0-alpine
+WORKDIR '/app'
+COPY ./package.json ./
+RUN npm install
+COPY . .
+# nodemon is a command line tool that automatically reloads your entire project
+# when any source code changes
+CMD [ "npm", "run", "dev" ]
